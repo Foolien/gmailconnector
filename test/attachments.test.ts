@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { deflateSync } from "node:zlib";
 import { attachmentCharset, attachmentText } from "../src/format.js";
 import { attachmentResult, decodeTextFile, FileTooLargeError, kindOf, officeText, pdfText, readOffice, readPdf, readTextFile, sniffType } from "../src/attachments.js";
+import { CPU_BUDGET_MS } from "./budget.js";
 import { docx, docxOf, pdf, PdfBuilder, pdfOf, pdfUpdate, png, pptx, refs, xlsx, xlsxOf, zip, zipOf } from "./files.js";
 
 test("PDF text comes out with line breaks and word spacing", async () => {
@@ -95,7 +96,7 @@ test("decompression bombs fail fast with a clear error instead of exhausting mem
   const read = await timed(() => readPdf(pdfBomb));
   assert.equal(read.value?.text, "Readable statement text for the account holder.");
   assert.match(read.value?.incomplete ?? "", /too large/);
-  for (const r of [honest, lying, read]) assert.ok(r.ms < 200, `took ${r.ms.toFixed(0)} ms`);
+  for (const r of [honest, lying, read]) assert.ok(r.ms < CPU_BUDGET_MS, `took ${r.ms.toFixed(0)} ms`);
 });
 
 test("readers stop once they have maxChars of text", async () => {
@@ -105,7 +106,7 @@ test("readers stop once they have maxChars of text", async () => {
   assert.ok(some.value!.text.length >= 20_000);
   assert.equal(some.value!.more, true);
   assert.equal(some.value!.incomplete, undefined);
-  assert.ok(some.ms < 200, `took ${some.ms.toFixed(0)} ms`);
+  assert.ok(some.ms < CPU_BUDGET_MS, `took ${some.ms.toFixed(0)} ms`);
   // Asking for everything still stops at the size limits, and says so.
   const all = await readOffice(big, { maxChars: 0 });
   assert.match(all.incomplete ?? "", /only (its|the) beginning is shown/);
@@ -152,7 +153,7 @@ test("hostile PDFs are read in linear time", async () => {
   };
   for (const [name, file] of Object.entries(cases)) {
     const r = await timed(() => readPdf(file));
-    assert.ok(r.ms < 200, `${name}: ${r.ms.toFixed(0)} ms`);
+    assert.ok(r.ms < CPU_BUDGET_MS, `${name}: ${r.ms.toFixed(0)} ms`);
   }
 });
 
@@ -235,7 +236,7 @@ test("big spreadsheets stop after maxChars, mid-sheet", async () => {
   const r = await timed(() => readOffice(file, { maxChars: 20_000 }));
   assert.equal(r.value!.more, true);
   assert.ok(r.value!.text.length >= 20_000 && r.value!.text.length < 21_000, String(r.value!.text.length));
-  assert.ok(r.ms < 200, `took ${r.ms.toFixed(0)} ms`);
+  assert.ok(r.ms < CPU_BUDGET_MS, `took ${r.ms.toFixed(0)} ms`);
 });
 
 // ---------- Word and PowerPoint ----------
@@ -557,7 +558,7 @@ test("crafted page trees and object streams stay fast", async () => {
   }
   for (const [name, file] of Object.entries(cases)) {
     const r = await timed(() => readPdf(file));
-    assert.ok(r.ms < 200, `${name}: ${r.ms.toFixed(0)} ms`);
+    assert.ok(r.ms < CPU_BUDGET_MS, `${name}: ${r.ms.toFixed(0)} ms`);
     assert.ok(r.value?.text, `${name}: no text`);
   }
 });

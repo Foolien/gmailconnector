@@ -5,6 +5,7 @@ import { bareAddress, cleanBody, cleanSnippet, decodeBody, decodeCharset, parseA
 import { Base64UrlData, buildMime, decodeBase64, encodeHeaderValue, htmlToText } from "../src/mime.js";
 import { attachmentDataOf } from "../src/mailbox.js";
 import { parseHeaders, parseMime } from "./fakeGmail.js";
+import { CPU_BUDGET_MS } from "./budget.js";
 
 test("ASCII headers pass through; non-ASCII becomes short encoded-words that round-trip", () => {
   assert.equal(encodeHeaderValue("Hello there"), "Hello there");
@@ -137,7 +138,7 @@ test("htmlToText stays fast on hostile HTML", () => {
     htmlToText(html);
     const used = process.cpuUsage(start);
     const ms = (used.user + used.system) / 1000;
-    assert.ok(ms < 200, `${name}: ${ms.toFixed(0)} ms of CPU`);
+    assert.ok(ms < CPU_BUDGET_MS, `${name}: ${ms.toFixed(0)} ms of CPU`);
   }
 });
 
